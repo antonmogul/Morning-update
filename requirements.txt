@@ -1,0 +1,8 @@
+feedparser
+notion-client
+openai>=1.35.0
+python-dateutil
+pydub
+ffmpeg-python
+requests
+pytz
