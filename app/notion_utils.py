@@ -157,23 +157,31 @@ def append_markdown(notion: Notion, page_id: str, md_text: str):
                 
             elif line.startswith("- "):
                 content = line[2:].strip()
-                # Add emojis to bullet points
+                # Enhanced emoji patterns from template 3
                 if "Why it matters" in content:
                     content = "💡 " + content
                 elif "Date:" in content:
                     content = "📅 " + content
                 elif "Breaking:" in content or "BREAKING:" in content:
                     content = "🚨 " + content
-                elif "Scotland" in content:
+                elif "Scotland" in content or "Scottish" in content or "Edinburgh" in content or "Glasgow" in content:
                     content = "🏴󠁧󠁢󠁳󠁣󠁴󠁿 " + content
-                elif "Montreal" in content:
+                elif "Montreal" in content or "Quebec" in content:
                     content = "🍁 " + content
-                elif "AI" in content or "Tech" in content:
+                elif "immigration" in content.lower() or "visa" in content.lower() or "PR" in content:
+                    content = "📋 " + content
+                elif "AI" in content or "Tech" in content or "startup" in content.lower():
                     content = "🤖 " + content
+                elif "funding" in content.lower() or "investment" in content.lower():
+                    content = "🚀 " + content
                 elif "Climate" in content or "Environment" in content:
                     content = "🌍 " + content
-                elif "Culture" in content or "Art" in content:
+                elif "university" in content.lower() or "education" in content.lower():
+                    content = "🎓 " + content
+                elif "Culture" in content or "Art" in content or "Festival" in content:
                     content = "🎨 " + content
+                elif "hiring" in content.lower() or "job" in content.lower():
+                    content = "🏙️ " + content
                 
                 bullet_block = {
                     "type": "bulleted_list_item",
@@ -190,16 +198,20 @@ def append_markdown(notion: Notion, page_id: str, md_text: str):
                 if line.strip() == "":
                     continue
                 
-                # Add emojis to regular paragraphs
+                # Enhanced emoji patterns for paragraphs from template 3
                 content = line
-                if "Good morning" in content:
+                if "Good morning" in content or "good morning" in content.lower():
                     content = "☀️ " + content
+                elif "zen" in content.lower() or "wisdom" in content.lower() or "calm" in content.lower():
+                    content = "🧘‍♂️ " + content
+                elif "count" in content.lower() or "One..." in content or "mindful" in content.lower():
+                    content = "🎯 " + content
+                elif "overview" in content.lower() or "summary" in content.lower():
+                    content = "📈 " + content
                 elif "weather" in content.lower():
                     content = "🌤️ " + content
-                elif "zen" in content.lower() or "calm" in content.lower():
-                    content = "🧘 " + content
-                elif "count" in content.lower() and any(num in content for num in ["1", "2", "3"]):
-                    content = "🔢 " + content
+                elif "articles" in content.lower() or "news" in content.lower():
+                    content = "📊 " + content
                 
                 para_block = {
                     "type": "paragraph",

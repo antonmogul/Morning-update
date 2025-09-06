@@ -263,8 +263,20 @@ def summarize_items(
     article_count = len(items[:max_items])
     section_display = section_name.replace('_', ' ').title()
     
-    # Personal intro
-    intro = f"Hey {name}! News from {section_display} - we have {article_count} article{'s' if article_count != 1 else ''} for you.\n\n"
+    # Get section emoji
+    section_emojis = {
+        "guardian": "🏛️",
+        "bbc": "📺", 
+        "montreal_news": "🍁",
+        "ai": "🤖"
+    }
+    emoji = section_emojis.get(section_name.lower(), "📰")
+    
+    # Personal intro with emoji matching template 3
+    article_word = "compelling article" if article_count == 1 else "articles"
+    if article_count >= 3:
+        article_word = f"compelling {article_word}"
+    intro = f"{emoji} Hey {name}! News from {section_display} - we have {article_count} {article_word} for you.\n\n"
     
     try:
         lines = []
@@ -362,15 +374,18 @@ def generate_morning_intro(
     
     overview = ", ".join(overview_parts) if overview_parts else "No major news today"
     
-    # Generate personalized intro with AI
-    prompt = f"""Create a warm, personalized morning greeting for {name}. Include:
-1. A friendly good morning greeting
-2. A brief, positive comment about the weather in {location} (be creative but realistic)
-3. A short, calming zen quote or mindfulness thought
-4. Count slowly from 1 to 10 with brief pauses (write it as "One... Two... Three..." etc.)
-5. Then say: "Today's news overview: {overview}"
+    # Generate personalized intro with AI - matching template 3 style
+    prompt = f"""Create a warm, personalized morning greeting for {name}. Format it EXACTLY like this:
 
-Keep it natural, warm, and under 30 seconds when spoken. Make it feel like a personal morning ritual."""
+🌅 Good morning {name}! Let's start your day with intention and awareness.
+
+🧘‍♂️ Zen moment: [Insert a meaningful zen quote or mindfulness thought here]
+
+🎯 Mindful counting: One... Two... Three... Four... Five... Six... Seven... Eight... Nine... Ten...
+
+📈 Today's curated news: {overview}
+
+Make the zen quote thoughtful and relevant to starting the day. Keep the tone warm but not overly familiar."""
     
     try:
         response = client.chat.completions.create(
@@ -388,12 +403,11 @@ Keep it natural, warm, and under 30 seconds when spoken. Make it feel like a per
         
     except Exception as e:
         logger.error(f"Failed to generate morning intro: {e}")
-        # Fallback intro
-        return f"""Good morning {name}! 
-        
-Let's start your day with a moment of calm. 
-Remember: 'The journey of a thousand miles begins with a single step.'
+        # Fallback intro matching template 3 style
+        return f"""🌅 Good morning {name}! Let's start your day with intention and awareness.
 
-Let's take a breath and count: One... Two... Three... Four... Five... Six... Seven... Eight... Nine... Ten...
+🧘‍♂️ Zen moment: "The present moment is the only moment available to us, and it is the door to all moments."
 
-Today's news overview: {overview}"""
+🎯 Mindful counting: One... Two... Three... Four... Five... Six... Seven... Eight... Nine... Ten...
+
+📈 Today's curated news: {overview}"""
