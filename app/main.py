@@ -27,7 +27,7 @@ from app.news import (
 from app.notion_utils import (
     find_or_create_daily_page,
     append_markdown,
-    append_audio,
+    append_audio_section,
     add_comment,
 )
 from app.utils import today_str, ensure_dir, repo_raw_url
@@ -246,16 +246,21 @@ def main():
         page_id = page["page_id"]
         logger.info(f"Using Notion page: {page_id}")
 
-        full_md = "\n\n".join(markdown_sections)
-        append_markdown(notion, page_id, full_md)
-
-        # Audio blocks: Morning intro first, then sections
+        # Prepare all audio blocks for the top section
+        audio_blocks = []
         if intro_audio_url:
-            append_audio(notion, page_id, "🌅 Morning Intro - Personal Briefing", intro_audio_url)
+            audio_blocks.append(("🌅 Morning Intro - Personal Briefing", intro_audio_url))
         
         for section, url in section_audio_urls.items():
             title = f"{section.replace('_',' ').title()} – Section Audio"
-            append_audio(notion, page_id, title, url)
+            audio_blocks.append((title, url))
+
+        # Add audio section at the top first
+        append_audio_section(notion, page_id, audio_blocks)
+        
+        # Then add the markdown content
+        full_md = "\n\n".join(markdown_sections)
+        append_markdown(notion, page_id, full_md)
 
         # 5) Notify via Notion comment
         add_comment(notion, page_id, "✅ Good morning Anton! Your personalized news brief is ready with intro + section audios.")
