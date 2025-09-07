@@ -188,10 +188,16 @@ def main():
             ogg_path = f"{day_dir}/{section}.ogg"
             
             save_bytes(mp3_path, mp3_bytes)
-            ogg_bytes = mp3_to_ogg_bytes(mp3_bytes)
-            save_bytes(ogg_path, ogg_bytes)
-
-            section_audio_urls[section] = repo_raw_url(repo, branch, ogg_path)
+            
+            # Use MP3 format for Notion compatibility (OGG may not be supported)
+            section_audio_urls[section] = repo_raw_url(repo, branch, mp3_path)
+            
+            # Still create OGG for potential future use
+            try:
+                ogg_bytes = mp3_to_ogg_bytes(mp3_bytes)
+                save_bytes(ogg_path, ogg_bytes)
+            except Exception as e:
+                logger.warning(f"OGG conversion failed for {section}: {e}")
             logger.info(f"Generated audio for section '{section}'")
             
         except Exception as e:
@@ -218,13 +224,15 @@ def main():
         intro_ogg_path = f"{day_dir}/morning_intro.ogg"
         save_bytes(intro_mp3_path, intro_mp3)
         
+        # Use MP3 format for Notion compatibility
+        intro_audio_url = repo_raw_url(repo, branch, intro_mp3_path)
+        
+        # Still create OGG for potential future use
         try:
             intro_ogg = mp3_to_ogg_bytes(intro_mp3)
             save_bytes(intro_ogg_path, intro_ogg)
-            intro_audio_url = repo_raw_url(repo, branch, intro_ogg_path)
         except Exception as e:
             logger.warning(f"OGG conversion failed for intro: {e}")
-            intro_audio_url = repo_raw_url(repo, branch, intro_mp3_path)
         
         logger.info("Generated morning intro audio")
         
