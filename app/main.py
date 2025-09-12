@@ -44,9 +44,19 @@ def save_bytes(path: str, data: bytes):
         IOError: If file cannot be written
     """
     try:
+        # Ensure parent directory exists
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
         with open(path, "wb") as f:
             f.write(data)
-        logger.debug(f"Saved {len(data)} bytes to {path}")
+        
+        # Change to INFO level for visibility and verify file was created
+        file_size = os.path.getsize(path)
+        logger.info(f"Saved {len(data)} bytes to {path} (verified size: {file_size} bytes)")
+        
+        if not os.path.exists(path):
+            raise IOError(f"File was not created at {path}")
+            
     except Exception as e:
         logger.error(f"Failed to save file {path}: {e}")
         raise IOError(f"Cannot write to {path}: {e}")
