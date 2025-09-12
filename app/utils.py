@@ -44,8 +44,8 @@ def ensure_dir(path: str) -> None:
 def repo_raw_url(repo: str, branch: str, path: str) -> str:
     """Build a URL for accessing files from GitHub repository.
     
-    Uses jsDelivr CDN for audio files to ensure proper Content-Type headers
-    for Notion compatibility. Falls back to raw GitHub URL for other files.
+    Uses raw GitHub URLs which now properly serve audio files with correct
+    Content-Type headers when the repository is public.
     
     Args:
         repo: Repository in 'owner/repo' format
@@ -62,17 +62,9 @@ def repo_raw_url(repo: str, branch: str, path: str) -> str:
         logger.error(f"Invalid repo format: {repo}")
         raise ValueError(f"Repo must be in 'owner/repo' format, got: {repo}")
     
-    # Check if this is an audio file that needs special handling for Notion
-    is_audio = path.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a'))
-    
-    if is_audio:
-        # Use jsDelivr CDN for audio files - serves with correct Content-Type headers
-        # Format: https://cdn.jsdelivr.net/gh/user/repo@branch/path
-        url = f"https://cdn.jsdelivr.net/gh/{repo}@{branch}/{path}"
-        logger.debug(f"Generated jsDelivr CDN URL for audio: {url}")
-    else:
-        # Use standard raw GitHub URL for non-audio files
-        url = f"https://raw.githubusercontent.com/{repo}/{branch}/{path}"
-        logger.debug(f"Generated raw GitHub URL: {url}")
+    # Use standard raw GitHub URL for all files
+    # GitHub now serves audio files with proper Content-Type headers for public repos
+    url = f"https://raw.githubusercontent.com/{repo}/{branch}/{path}"
+    logger.debug(f"Generated raw GitHub URL: {url}")
     
     return url
