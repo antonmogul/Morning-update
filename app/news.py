@@ -23,14 +23,14 @@ DEFAULT_FEEDS: Dict[str, FeedConfig] = {
             "https://www.theguardian.com/uk/culture/rss",
             "https://www.theguardian.com/lifeandstyle/rss",
         ],
-        "prompt": "Mix of world, culture, and lifestyle stories.",
+        "prompt": "Global context with a cultural edge — world events, arts, lifestyle. Flag anything shaping people’s lives or ideas.",
     },
     "bbc": {
         "urls": [
             "https://feeds.bbci.co.uk/news/rss.xml",
             "https://feeds.bbci.co.uk/news/technology/rss.xml",
         ],
-        "prompt": "Prioritize Scotland and broader UK coverage, mix of culture and lifestyle stories with politics and business.",
+        "prompt": "Focus on Scotland, UK politics, and cultural currents. Highlight UK tech/business when it ties back to people or society.",
     },
     "montreal_news": {
         "urls": [
@@ -38,32 +38,47 @@ DEFAULT_FEEDS: Dict[str, FeedConfig] = {
             "https://www.mtlblog.com/feeds/news.rss",
             "https://globalnews.ca/montreal/feed/",
         ],
-        "prompt": "Local Montreal news with civic impact, focus on local events and politics, lifestyle and culture. If anything about immigration.",
+        "prompt": "Montreal civic & cultural news; prioritize politics, immigration, and day-to-day quality-of-life shifts.",
     },
     "ai": {
         "urls": [
             "https://feeds.arstechnica.com/arstechnica/ai",
             "https://www.techmeme.com/feed.xml",
         ],
-        "prompt": "AI/tech developments relevant to startups.",
+        "prompt": "Practical AI/tech developments that change how people work or live; useful for product strategy.",
     },
 }
 
 
-SYSTEM_SUMMARY = (
-    "You summarize news items. "
-    "Write crisp, factual bullets (2–3) for each article. "
-    "Add (Date: YYYY-MM-DD). End each item with 'Why it matters' (one line)."
-    "Include the link to the article."
-)
+SYSTEM_SCORE = """
+You are a news prioritization model for Anton Morrison (UX/AI strategist in Montreal, originally from Glasgow).
+Score the IMPORTANCE of a news item from 0–100.
 
-SYSTEM_SCORE = (
-    "You are a news prioritization model. Score the IMPORTANCE of a news item from 0 to 100 "
-    "for a Anton Morrison who is a busy person living in Montreal, and is from Glasgow Scotland. Consider recency (last 24h), broad impact, "
-    "business/tech relevance (esp. AI), Canada/Montreal relevance, and credibility. "
-    "If anything about imegration, focus on the impact on Anton as an imigrant on current work visa waiting for PR."
-    "Return ONLY a JSON object: {\"score\": <0-100>, \"reason\": \"...\"}."
-)
+Priorities:
+- Fresh (last 24h)
+- Montreal/Canada relevance
+- Scotland/UK connections
+- Social, cultural, and human impact (immigration, community, people’s stories)
+- AI/tech relevance, especially where it touches people’s lives
+- Global events that change how people live or work
+
+80% = quick awareness of essentials
+20% = surprising human-interest insights
+
+Return ONLY JSON:
+{"score": <0-100>, "reason": "<1–2 lines, in the tone of a smart colleague, focusing on human/cultural impact>"}
+"""
+
+SYSTEM_SUMMARY = """
+You summarize news items for Anton Morrison’s daily brief.
+Write 2–3 short bullets per article. Keep them crisp, conversational, and scannable.
+Do NOT include dates — Anton listens daily.
+Do NOT include “read here”, “view here”, “click here”, or similar instructions.
+End each item with: "Why it matters: ..." — one line, human/cultural impact first.
+
+80% = must-know awareness
+20% = human-interest enrichment
+"""
 
 
 def parse_date(entry) -> Optional[datetime]:
@@ -276,16 +291,21 @@ def summarize_items(
     article_word = "compelling article" if article_count == 1 else "articles"
     if article_count >= 3:
         article_word = f"compelling {article_word}"
-    intro = f"{emoji} Hey {name}! News from {section_display} - we have {article_count} {article_word} for you.\n\n"
+    intro = f"{emoji} {section_display} highlights — {article_count} {article_word} teed up.\n\n"
     
     try:
         lines = []
         for it in items[:max_items]:
-            date_str = it.get("published", "")[:10]
             # Don't include URLs in the summary request
-            lines.append(f"- **{it['title']}** (Date: {date_str})")
-        
-        user = f"Summarize the following articles as conversational bullet points for {name}'s daily brief. Make it personal and engaging:\n" + "\n".join(lines)
+            lines.append(f"- **{it['title']}**")
+
+        user = (
+            "Summarize the following articles as conversational bullet points for Anton Morrison’s daily brief.\n"
+            "Keep it tight and scannable, like a smart colleague explaining.\n"
+            "Do not include dates, links, or phrases like “read more”, “view here”, “click here”.\n"
+            "Avoid repeating section names (e.g., Guardian, BBC) in every bullet — keep it varied.\n\n"
+            + "\n".join(lines)
+        )
         
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -374,25 +394,34 @@ def generate_morning_intro(
     
     overview = ", ".join(overview_parts) if overview_parts else "No major news today"
     
-    # Generate personalized intro with AI - matching template 3 style
-    prompt = f"""Create a warm, personalized morning greeting for {name}. Format it EXACTLY like this:
+    # Generate personalized intro with AI using the updated template
+    sections_hint = overview if overview_parts else "Keep it light; no major sections today."
+    prompt = f"""Create a warm, sharp morning intro for Anton Morrison (UX/AI strategist in Montreal, originally from Glasgow).
 
-🌅 Good morning {name}! Let's start your day with intention and awareness.
+Format EXACTLY:
 
-🧘‍♂️ Zen moment: [Insert a meaningful zen quote or mindfulness thought here]
+🌅 Good morning Anton! Here’s what’s worth knowing today.
 
-🎯 Mindful counting: One... Two... Three... Four... Five... Six... Seven... Eight... Nine... Ten...
+🧘 Zen moment: [short, human-centered quote about clarity or presence]
 
-📈 Today's curated news: {overview}
+📊 Quick scan: [overview of sections, no repetitive provider naming]
 
-Make the zen quote thoughtful and relevant to starting the day. Keep the tone warm but not overly familiar."""
+👥 Human touch: [one person-focused nugget]
+
+Tone = smart colleague: helpful, concise, a little conversational, not formal or corporate.
+
+Sections overview to reference: {sections_hint}
+"""
     
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0.7,
             messages=[
-                {"role": "system", "content": "You are a warm, friendly morning news host creating a personalized daily intro."},
+                {
+                    "role": "system",
+                    "content": "You are a warm, friendly morning news host creating a personalized daily intro.",
+                },
                 {"role": "user", "content": prompt}
             ]
         )
@@ -404,10 +433,63 @@ Make the zen quote thoughtful and relevant to starting the day. Keep the tone wa
     except Exception as e:
         logger.error(f"Failed to generate morning intro: {e}")
         # Fallback intro matching template 3 style
-        return f"""🌅 Good morning {name}! Let's start your day with intention and awareness.
+        return (
+            "🌅 Good morning Anton! Here’s what’s worth knowing today.\n\n"
+            "🧘 Zen moment: \"The present moment is the only moment available to us, and it is the door to all moments.\"\n\n"
+            f"📊 Quick scan: {sections_hint}\n\n"
+            "👥 Human touch: Spotlighting one neighbourly story to start your day."
+        )
 
-🧘‍♂️ Zen moment: "The present moment is the only moment available to us, and it is the door to all moments."
 
-🎯 Mindful counting: One... Two... Three... Four... Five... Six... Seven... Eight... Nine... Ten...
+CLEAN_PHRASES = re.compile(
+    r"\b(?:read|view|click|watch|listen)\s+(?:here|more)\b",
+    flags=re.IGNORECASE
+)
 
-📈 Today's curated news: {overview}"""
+DATE_PARENS = re.compile(
+    r"\(Date:\s*\d{4}-\d{2}-\d{2}\)"
+)
+
+# Remove Markdown links but keep anchor text: [text](url) -> text
+MARKDOWN_LINK = re.compile(
+    r"\[([^\]]+)\]\((?:https?://|www\.)[^\s)]+\)"
+)
+
+# Remove repeated "News from Guardian/BBC..." intros at the top of a section block
+SECTION_INTRO = re.compile(
+    r"^\s*(?:[^\n]*?News from\s+(?:Guardian|BBC)[^\n]*\n\n)",
+    flags=re.IGNORECASE | re.MULTILINE
+)
+
+# Collapse excess whitespace/newlines
+MULTISPACE = re.compile(r"[ \t]{2,}")
+MULTINEWLINE = re.compile(r"\n{3,}")
+
+
+def clean_for_text(markdown: str) -> str:
+    """Cleanup for Notion text blocks (keeps bullets/headings, removes noise)."""
+
+    s = markdown
+    s = DATE_PARENS.sub("", s)
+    s = CLEAN_PHRASES.sub("", s)
+    s = MARKDOWN_LINK.sub(r"\1", s)
+    s = SECTION_INTRO.sub("", s)
+    s = re.sub(r"[ \t]+\n", "\n", s)  # trim trailing spaces before newline
+    s = MULTISPACE.sub(" ", s)
+    s = MULTINEWLINE.sub("\n\n", s)
+    return s.strip()
+
+
+def clean_for_tts(text: str) -> str:
+    """Cleanup for speech: stricter; remove links, provider intros, and instrux."""
+
+    s = text
+    # Strip any raw URLs first (existing behavior is inside tts_to_mp3_bytes, this makes it idempotent)
+    s = re.sub(r"https?://[^\s]+", "", s)
+    s = MARKDOWN_LINK.sub(r"\1", s)
+    s = DATE_PARENS.sub("", s)
+    s = CLEAN_PHRASES.sub("", s)
+    s = SECTION_INTRO.sub("", s)
+    s = MULTISPACE.sub(" ", s)
+    s = MULTINEWLINE.sub("\n", s)
+    return s.strip()
