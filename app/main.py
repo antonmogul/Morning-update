@@ -23,6 +23,8 @@ from app.news import (
     summarize_items,
     tts_to_mp3_bytes,
     generate_morning_intro,
+    clean_for_text,
+    clean_for_tts,
 )
 from app.notion_utils import (
     find_or_create_daily_page,
@@ -193,7 +195,8 @@ def main():
             # TTS
             logger.info(f"Generating audio for section '{section}'")
             # Use different voice for each section
-            mp3_bytes = tts_to_mp3_bytes(client, summary_md)
+            tts_input = clean_for_tts(summary_md)
+            mp3_bytes = tts_to_mp3_bytes(client, tts_input)
             mp3_path = f"{day_dir}/{section}.mp3"
             ogg_path = f"{day_dir}/{section}.ogg"
             
@@ -227,9 +230,10 @@ def main():
     try:
         logger.info("Generating personalized morning intro")
         intro_text = generate_morning_intro(client, sections_summary, name="Anton", location="Montreal")
-        
+
         # Create intro audio with a calm voice
-        intro_mp3 = tts_to_mp3_bytes(client, intro_text, voice="nova")  # Nova is a calm, pleasant voice
+        intro_tts = clean_for_tts(intro_text)
+        intro_mp3 = tts_to_mp3_bytes(client, intro_tts, voice="nova")  # Nova is a calm, pleasant voice
         intro_mp3_path = f"{day_dir}/morning_intro.mp3"
         intro_ogg_path = f"{day_dir}/morning_intro.ogg"
         save_bytes(intro_mp3_path, intro_mp3)
@@ -278,6 +282,7 @@ def main():
         
         # Then add the markdown content
         full_md = "\n\n".join(markdown_sections)
+        full_md = clean_for_text(full_md)
         append_markdown(notion, page_id, full_md)
 
         # 5) Notify via Notion comment
